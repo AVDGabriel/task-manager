@@ -8,7 +8,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, collection, getDocs, writeBatch } from "firebase/firestore";
 
 interface AuthContextProps {
   user: User | null;
@@ -24,8 +25,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const initializeUserData = async (email: string) => {
+    try {
+      console.log("Initializing user data for:", email);
+      
+      const userRef = doc(db, "users", email);
+      await setDoc(userRef, {
+        email: email,
+        createdAt: new Date().toISOString(),
+      });
+      
+      console.log("User document created");
+      
+      const prioritiesRef = collection(db, `users/${email}/priorities`);
+      const defaultPriorities = [
+        { name: "High", color: "#ef4444", level: 1 }, // red
+        { name: "Medium", color: "#eab308", level: 2 }, // yellow
+        { name: "Low", color: "#22c55e", level: 3 }, // green
+      ];
+
+      const batch = writeBatch(db);
+      defaultPriorities.forEach((priority) => {
+        const newDocRef = doc(prioritiesRef);
+        batch.set(newDocRef, priority);
+      });
+      await batch.commit();
+      
+      console.log("Default priorities created");
+    } catch (error) {
+      console.error("Error initializing user data:", error);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setLoading(false);
     });
@@ -34,15 +67,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
   };
 
   const register = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (userCredential.user.email) {
+        await initializeUserData(userCredential.user.email);
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    try {
+      setLoading(true);
+      setUser(null);
+      await signOut(auth);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      console.error("Logout error:", error);
+      throw error;
+    }
   };
 
   return (
