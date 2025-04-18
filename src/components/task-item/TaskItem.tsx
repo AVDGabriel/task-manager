@@ -10,7 +10,13 @@ export default function TaskItem({ task }: { task: any }) {
   const [newTitle, setNewTitle] = useState(task.title);
 
   const user = auth.currentUser;
-  const ref = doc(db, "users", user!.uid, "tasks", task.id);
+  
+  // If no user is authenticated, don't render the task item
+  if (!user || !user.email) {
+    return null;
+  }
+
+  const ref = doc(db, "users", user.email, "tasks", task.id);
 
   const toggleCompleted = () => {
     updateDoc(ref, { completed: !task.completed });
