@@ -1,41 +1,65 @@
+"use client";
+
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState } from "react";
 import { auth, db } from "@/lib/firebase";
+import { useCategory } from "@/context/CategoryContext";
+import { usePriority } from "@/context/PriorityContext";
 
 export default function TaskInput() {
   const [title, setTitle] = useState("");
+  const { selectedCategory } = useCategory();
+  const { priorities } = usePriority();
 
-  const handleAddTask = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!title.trim()) return;
 
     const user = auth.currentUser;
-    if (!user || !user.email) return;
+    if (!user?.email) return;
 
-    await addDoc(collection(db, "users", user.email!, "tasks"), {
-      title: title.trim(),
-      completed: false,
-      createdAt: serverTimestamp(),
-    });
+    // Find the default low priority
+    const lowPriority = priorities.find(p => p.name.toLowerCase() === "low");
+    const defaultPriorityId = lowPriority?.id || null;
 
-    setTitle("");
+    try {
+      await addDoc(collection(db, "users", user.email, "tasks"), {
+        title: title.trim(),
+        completed: false,
+        createdAt: serverTimestamp(),
+        categoryId: selectedCategory || null,
+        priorityId: defaultPriorityId,
+      });
+
+      setTitle("");
+    } catch (error) {
+      console.error("Error adding task:", error);
+    }
   };
 
   return (
-    <div className="w-full max-w-2xl px-8 pb-6">
-      <div className="flex items-center space-x-2">
+    <div className="w-full px-8 pb-6">
+      <form onSubmit={handleSubmit} className="flex w-full gap-2">
         <input
+          id="new-task"
+          type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Add a task..."
+          placeholder={`Add a task${selectedCategory ? ' to this category' : ''}...`}
           className="flex-1 bg-zinc-800 p-3 rounded text-white outline-none"
         />
         <button
-          onClick={handleAddTask}
-          className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-white"
+          type="submit"
+          disabled={!title.trim()}
+          className={`px-6 py-2 rounded text-white ${
+            title.trim() 
+              ? 'bg-blue-600 hover:bg-blue-500' 
+              : 'bg-zinc-700 cursor-not-allowed'
+          }`}
         >
           Add
         </button>
-      </div>
+      </form>
     </div>
   );
 }
