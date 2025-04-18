@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.token.email == userId;
+    }
+
+    match /users/{userId} {
+      allow create, read: if isOwner(userId);
+      
+      match /tasks/{taskId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          request.resource.data.keys().hasAll(['title', 'completed', 'createdAt', 'priorityId']) &&
+          request.resource.data.title is string &&
+          request.resource.data.title.size() > 0 &&
+          request.resource.data.completed is bool &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.priorityId is string;
+        allow update, delete: if isOwner(userId);
+
+        match /comments/{commentId} {
+          allow list, get: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+            request.resource.data.keys().hasAll(['text', 'createdAt']) &&
+            request.resource.data.text is string &&
+            request.resource.data.text.size() > 0 &&
+            request.resource.data.createdAt is timestamp;
+          allow delete: if isOwner(userId);
+        }
+      }
+      
+      match /categories/{categoryId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          request.resource.data.keys().hasAll(['name']) &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0;
+        allow update, delete: if isOwner(userId);
+      }
+      
+      match /priorities/{priorityId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          request.resource.data.keys().hasAll(['name', 'color', 'level']) &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0 &&
+          request.resource.data.color is string &&
+          request.resource.data.level is number &&
+          request.resource.data.level >= 1 &&
+          request.resource.data.level <= 3;
+        allow update, delete: if isOwner(userId);
+      }
+    }
+  }
+} 

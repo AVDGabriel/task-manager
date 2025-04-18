@@ -1,8 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-
-console.log("🔑 API KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -17,3 +15,17 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Enable auth persistence
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Firebase auth persistence enabled");
+  })
+  .catch((error) => {
+    console.error("Error enabling auth persistence:", error);
+  });
+
+// Debug auth state changes
+onAuthStateChanged(auth, (user) => {
+  console.log("Auth state changed:", user ? `User ${user.email} signed in` : "User signed out");
+});
