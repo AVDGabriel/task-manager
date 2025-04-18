@@ -8,7 +8,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 interface AuthContextProps {
   user: User | null;
@@ -25,9 +26,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setLoading(false);
+
+      if (user && user.email) {
+        const userRef = doc(db, "users", user.email);
+        const docSnap = await getDoc(userRef);
+
+        if (!docSnap.exists()) {
+          await setDoc(userRef, {
+            email: user.email,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
     });
 
     return () => unsubscribe();

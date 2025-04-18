@@ -1,34 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
+import Sidebar from "@/components/layout/SideBar";
+import TaskInput from "@/components/task-input/TaskInput";
+import TaskList from "@/components/task-list/TaskList";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
 
-export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+export default function Dashboard() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
-  if (!user) return null;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) router.push("/login");
+      else setUser(user);
+    });
+    return unsubscribe;
+  }, [router]);
 
   return (
-    <div className="max-w-md mx-auto mt-10 text-center">
-      <h1 className="text-2xl font-bold mb-4">Welcome, {user.email}</h1>
-      <button
-        className="bg-red-600 text-white px-4 py-2 rounded"
-        onClick={async () => {
-          await logout();
-          router.push("/login");
-        }}
-      >
-        Logout
-      </button>
+    <div className="flex bg-zinc-900 min-h-screen text-white">
+      <Sidebar />
+      <main className="flex-1 flex flex-col items-center px-8">
+        <div className="w-full max-w-2xl py-6">
+          <h1 className="text-2xl font-bold mb-4">All Tasks</h1>
+          <TaskList />
+        </div>
+        <TaskInput />
+      </main>
     </div>
   );
 }
