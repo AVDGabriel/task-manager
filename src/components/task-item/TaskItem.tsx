@@ -76,7 +76,10 @@ export default function TaskItem({ task, showCategory = false }: TaskItemProps) 
 
   const toggleCompleted = async () => {
     try {
-      await updateDoc(ref, { completed: !task.completed });
+      await updateDoc(ref, { 
+        completed: !task.completed,
+        categoryId: task.categoryId
+      });
       showSuccess(`Task marked as ${!task.completed ? 'completed' : 'incomplete'}`);
     } catch (error) {
       handleError(error, 'Failed to update task status');
