@@ -10,70 +10,29 @@ import TaskListPagination from "./TaskListPagination";
 import CompletedTasks from "./CompletedTasks";
 
 export default function TaskList() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [tasksPerPage, setTasksPerPage] = useState(10);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
-  const [nameFilter, setNameFilter] = useState("");
-  
   const { selectedCategory } = useCategory();
-  const { priorities, selectedPriority, setSelectedPriority } = usePriority();
+  const { priorities, selectedPriority, setSelectedPriority } = usePriority();  
   const {
     tasks,
     completedTasks,
     loading,
     totalTasks,
-    fetchTasks,
-    fetchCompletedTasks,
-    fetchTotalTasks,
+    currentPage,
+    tasksPerPage,
+    sortDirection,
+    nameFilter,
+    handlePageChange,
+    handleTasksPerPageChange,
+    handleSortDirectionChange,
+    handleNameFilterChange,
   } = useTasks();
 
-  // Reset to first page when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [nameFilter, selectedPriority]);
-
-  // Reset pagination when category changes
-  useEffect(() => {
-    // Calculate max pages for the new category
-    const maxPages = Math.ceil(totalTasks / tasksPerPage);
-    
-    // If current page is invalid for the new category, reset to page 1
-    if (currentPage > maxPages) {
-      setCurrentPage(1);
-    }
-    
-    setNameFilter("");
-  }, [selectedCategory, totalTasks, tasksPerPage, currentPage]);
-
   const handleSortClick = () => {
-    setSortDirection(current => {
-      if (current === null) return 'asc';
-      if (current === 'asc') return 'desc';
-      return null;
-    });
-    setCurrentPage(1);
-  };
-
-  // Fetch tasks when dependencies change
-  useEffect(() => {
-    try {
-      fetchTasks(currentPage, tasksPerPage, sortDirection, nameFilter);
-      fetchCompletedTasks(sortDirection, nameFilter);
-      fetchTotalTasks(sortDirection, nameFilter);
-    } catch (error) {
-      console.error("Error setting up subscriptions:", error);
-    }
-  }, [currentPage, tasksPerPage, sortDirection, nameFilter, selectedCategory, selectedPriority, fetchTasks, fetchCompletedTasks, fetchTotalTasks]);
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= Math.ceil(totalTasks / tasksPerPage)) {
-      setCurrentPage(newPage);
-    }
-  };
-
-  const handleTasksPerPageChange = (value: number) => {
-    setTasksPerPage(value);
-    setCurrentPage(1);
+    handleSortDirectionChange(
+      sortDirection === null ? 'asc' : 
+      sortDirection === 'asc' ? 'desc' : 
+      null
+    );
   };
 
   if (loading && !nameFilter && tasks.length === 0) {
@@ -104,7 +63,7 @@ export default function TaskList() {
     <div className="space-y-4">
       <TaskListFilters
         nameFilter={nameFilter}
-        onNameFilterChange={setNameFilter}
+        onNameFilterChange={handleNameFilterChange}
         selectedPriority={selectedPriority}
         onPriorityChange={setSelectedPriority}
         priorities={priorities}

@@ -93,6 +93,48 @@ export function useTasks() {
     return constraints;
   }, [selectedCategory, selectedPriority]);
 
+  const updateTotalTasks = useCallback(() => {
+    if (!user?.email) return;
+
+    // Create constraints without the due date filter for total count
+    const countConstraints: QueryConstraint[] = [];
+    
+    // Add category filter when viewing a specific category
+    if (selectedCategory !== null) {
+      countConstraints.push(where("categoryId", "==", selectedCategory));
+    }
+    
+    if (selectedPriority) {
+      countConstraints.push(where("priorityId", "==", selectedPriority));
+    }
+    
+    // Only filter for incomplete tasks
+    countConstraints.push(where("completed", "==", false));
+    
+    // Add basic ordering
+    countConstraints.push(orderBy("createdAt", "desc"));
+
+    const q = query(collection(db, `users/${user.email}/tasks`), ...countConstraints);
+    
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const newTotal = snapshot.size;
+        setTotalTasks(newTotal);
+        // Reset to page 1 if current page is invalid
+        if (currentPage > Math.ceil(newTotal / tasksPerPage)) {
+          setCurrentPage(1);
+        }
+      },
+      (error) => {
+        if (error.code !== 'permission-denied') {
+          handleError(error, 'Error loading task count');
+        }
+      }
+    );
+
+    addUnsubscriber(unsubscribe);
+  }, [user?.email, selectedCategory, selectedPriority, currentPage, tasksPerPage]);
+
   const fetchTasks = useCallback(async (
     currentPage: number,
     tasksPerPage: number,
@@ -157,6 +199,8 @@ export function useTasks() {
             })) as Task[];
             setTasks(tasksData);
             setLoading(false);
+            // Update total tasks count when tasks change
+            updateTotalTasks();
           },
           (error) => {
             if (error.code !== 'permission-denied') {
@@ -195,6 +239,8 @@ export function useTasks() {
             })) as Task[];
             setTasks(tasksData);
             setLoading(false);
+            // Update total tasks count when tasks change
+            updateTotalTasks();
           },
           (error) => {
             if (error.code !== 'permission-denied') {
@@ -212,7 +258,7 @@ export function useTasks() {
       }
       setLoading(false);
     }
-  }, [user?.email, selectedCategory, selectedPriority]);
+  }, [user?.email, selectedCategory, selectedPriority, updateTotalTasks]);
 
   const fetchCompletedTasks = useCallback((
     sortDirection: 'asc' | 'desc' | null,
@@ -232,6 +278,8 @@ export function useTasks() {
 
         // Ensure we're only showing completed tasks
         setCompletedTasks(tasksData.filter(task => task.completed));
+        // Update total tasks count when completed tasks change
+        updateTotalTasks();
       },
       (error) => {
         if (error.code !== 'permission-denied') {
@@ -241,58 +289,32 @@ export function useTasks() {
     );
 
     addUnsubscriber(unsubscribe);
-  }, [user?.email, buildQueryConstraints]);
+  }, [user?.email, buildQueryConstraints, updateTotalTasks]);
 
-  const fetchTotalTasks = useCallback((
-    sortDirection: 'asc' | 'desc' | null,
-    nameFilter: string
-  ) => {
-    if (!user?.email || nameFilter) return;
-
-    // Create constraints without the due date filter for total count
-    const countConstraints: QueryConstraint[] = [];
-    
-    // Add category filter when viewing a specific category
-    if (selectedCategory !== null) {
-      countConstraints.push(where("categoryId", "==", selectedCategory));
-    }
-    
-    if (selectedPriority) {
-      countConstraints.push(where("priorityId", "==", selectedPriority));
-    }
-    
-    // Only filter for incomplete tasks
-    countConstraints.push(where("completed", "==", false));
-    
-    // Add basic ordering
-    countConstraints.push(orderBy("createdAt", "desc"));
-
-    const q = query(collection(db, `users/${user.email}/tasks`), ...countConstraints);
-    
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const newTotal = snapshot.size;
-        setTotalTasks(newTotal);
-      },
-      (error) => {
-        if (error.code !== 'permission-denied') {
-          handleError(error, 'Error loading task count');
-        }
-      }
-    );
-
-    addUnsubscriber(unsubscribe);
-  }, [user?.email, selectedCategory, selectedPriority]);
-
-  // Reset tasks when category changes
+  // Reset page and fetch tasks when category changes
   useEffect(() => {
-    if (user?.email) {
-      cleanup();
-      fetchTasks(currentPage, tasksPerPage, sortDirection, nameFilter);
-      fetchCompletedTasks(sortDirection, nameFilter);
-      fetchTotalTasks(sortDirection, nameFilter);
-    }
-  }, [selectedCategory, user?.email, currentPage, tasksPerPage, sortDirection, nameFilter, fetchTasks, fetchCompletedTasks, fetchTotalTasks]);
+    if (!user?.email) return;
+
+    // Reset to page 1 when category changes
+    setCurrentPage(1);
+    setNameFilter("");
+
+    // Fetch tasks with the new category
+    cleanup();
+    fetchTasks(1, tasksPerPage, sortDirection, "");
+    fetchCompletedTasks(sortDirection, "");
+    updateTotalTasks();
+  }, [selectedCategory]);
+
+  // Fetch tasks when pagination or filters change (but not category)
+  useEffect(() => {
+    if (!user?.email) return;
+
+    cleanup();
+    fetchTasks(currentPage, tasksPerPage, sortDirection, nameFilter);
+    fetchCompletedTasks(sortDirection, nameFilter);
+    updateTotalTasks();
+  }, [currentPage, tasksPerPage, sortDirection, nameFilter, selectedPriority, user?.email]);
 
   const deleteAllCompletedTasks = useCallback(async () => {
     if (!user?.email) return;
@@ -321,14 +343,40 @@ export function useTasks() {
     }
   }, [user?.email, selectedCategory]);
 
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= Math.ceil(totalTasks / tasksPerPage)) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleTasksPerPageChange = (value: number) => {
+    setTasksPerPage(value);
+    setCurrentPage(1);
+  };
+
+  const handleSortDirectionChange = (direction: 'asc' | 'desc' | null) => {
+    setSortDirection(direction);
+    setCurrentPage(1);
+  };
+
+  const handleNameFilterChange = (filter: string) => {
+    setNameFilter(filter);
+    setCurrentPage(1);
+  };
+
   return {
     tasks,
     completedTasks,
     loading,
     totalTasks,
-    fetchTasks,
-    fetchCompletedTasks,
-    fetchTotalTasks,
+    currentPage,
+    tasksPerPage,
+    sortDirection,
+    nameFilter,
+    handlePageChange,
+    handleTasksPerPageChange,
+    handleSortDirectionChange,
+    handleNameFilterChange,
     deleteAllCompletedTasks
   };
 } 
