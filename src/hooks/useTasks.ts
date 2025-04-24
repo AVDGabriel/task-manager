@@ -12,7 +12,8 @@ import {
   getDocs,
   Query,
   DocumentData,
-  QueryDocumentSnapshot
+  QueryDocumentSnapshot,
+  deleteDoc
 } from "firebase/firestore";
 import type { Task } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -25,13 +26,17 @@ export function useTasks() {
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalTasks, setTotalTasks] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tasksPerPage, setTasksPerPage] = useState(10);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+  const [nameFilter, setNameFilter] = useState("");
   const pageSnapshotsRef = useRef<{ [key: number]: QueryDocumentSnapshot }>({});
   const unsubscribersRef = useRef<(() => void)[]>([]);
   
   const { user } = useAuth();
   const { selectedCategory } = useCategory();
   const { selectedPriority } = usePriority();
-  const { handleError } = useToast();
+  const { handleError, showSuccess } = useToast();
 
   // Cleanup function to unsubscribe from all listeners
   const cleanup = () => {
@@ -70,7 +75,8 @@ export function useTasks() {
       constraints.push(orderBy("createdAt", "desc"));
     }
     
-    if (selectedCategory) {
+    // Apply category filter when viewing a specific category
+    if (selectedCategory !== null) {
       constraints.push(where("categoryId", "==", selectedCategory));
     }
     
@@ -99,65 +105,114 @@ export function useTasks() {
     }
 
     setLoading(true);
-    const constraints = buildQueryConstraints(sortDirection, nameFilter, false);
     const baseQuery = collection(db, `users/${user.email}/tasks`);
-    const skip = (currentPage - 1) * tasksPerPage;
 
     try {
-      // First, check if the page is valid by getting the total count
-      const countQuery = query(baseQuery, ...constraints);
-      const countSnapshot = await getDocs(countQuery);
-      const totalCount = countSnapshot.size;
+      // Create base constraints similar to total count
+      const baseConstraints: QueryConstraint[] = [];
       
-      // If the current page is invalid, reset to page 1
-      if (currentPage > Math.ceil(totalCount / tasksPerPage)) {
-        setLoading(false);
-        return;
+      // Add category filter when viewing a specific category
+      if (selectedCategory !== null) {
+        baseConstraints.push(where("categoryId", "==", selectedCategory));
       }
-
-      let q: Query<DocumentData>;
-
-      if (currentPage === 1) {
-        q = query(baseQuery, ...constraints, limit(tasksPerPage));
-      } else {
-        const skipQuery = query(baseQuery, ...constraints, limit(skip));
-        const skipSnapshot = await getDocs(skipQuery);
-
-        if (skipSnapshot.empty) {
-          setLoading(false);
-          return;
-        }
-
-        const lastDoc = skipSnapshot.docs[skipSnapshot.docs.length - 1];
-        q = query(baseQuery, ...constraints, startAfter(lastDoc), limit(tasksPerPage));
+      
+      if (selectedPriority) {
+        baseConstraints.push(where("priorityId", "==", selectedPriority));
       }
+      
+      // Only get incomplete tasks
+      baseConstraints.push(where("completed", "==", false));
 
-      const unsubscribe = onSnapshot(q, 
-        (snapshot) => {
-          const tasksData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as Task[];
+      // Add sorting constraints
+      if (sortDirection) {
+        // When sorting by due date, only show tasks with due dates
+        const constraints = [
+          ...baseConstraints,
+          where("dueDate", "!=", null),
+          orderBy("dueDate", sortDirection),
+          orderBy("createdAt", "desc")
+        ];
 
-          setTasks(tasksData);
-          setLoading(false);
-        },
-        (error) => {
-          if (error.code !== 'permission-denied') {
-            handleError(error, 'Error loading tasks');
+        let q: Query<DocumentData>;
+        if (currentPage === 1) {
+          q = query(baseQuery, ...constraints, limit(tasksPerPage));
+        } else {
+          const skipQuery = query(baseQuery, ...constraints, limit((currentPage - 1) * tasksPerPage));
+          const skipSnapshot = await getDocs(skipQuery);
+          
+          if (skipSnapshot.empty) {
+            setLoading(false);
+            return;
           }
-          setLoading(false);
+          
+          const lastDoc = skipSnapshot.docs[skipSnapshot.docs.length - 1];
+          q = query(baseQuery, ...constraints, startAfter(lastDoc), limit(tasksPerPage));
         }
-      );
 
-      addUnsubscriber(unsubscribe);
+        const unsubscribe = onSnapshot(q,
+          (snapshot) => {
+            const tasksData = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            })) as Task[];
+            setTasks(tasksData);
+            setLoading(false);
+          },
+          (error) => {
+            if (error.code !== 'permission-denied') {
+              handleError(error, 'Error loading tasks');
+            }
+            setLoading(false);
+          }
+        );
+
+        addUnsubscriber(unsubscribe);
+      } else {
+        // When not sorting by due date, use simple ordering
+        baseConstraints.push(orderBy("createdAt", "desc"));
+        
+        let q: Query<DocumentData>;
+        if (currentPage === 1) {
+          q = query(baseQuery, ...baseConstraints, limit(tasksPerPage));
+        } else {
+          const skipQuery = query(baseQuery, ...baseConstraints, limit((currentPage - 1) * tasksPerPage));
+          const skipSnapshot = await getDocs(skipQuery);
+          
+          if (skipSnapshot.empty) {
+            setLoading(false);
+            return;
+          }
+          
+          const lastDoc = skipSnapshot.docs[skipSnapshot.docs.length - 1];
+          q = query(baseQuery, ...baseConstraints, startAfter(lastDoc), limit(tasksPerPage));
+        }
+
+        const unsubscribe = onSnapshot(q,
+          (snapshot) => {
+            const tasksData = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            })) as Task[];
+            setTasks(tasksData);
+            setLoading(false);
+          },
+          (error) => {
+            if (error.code !== 'permission-denied') {
+              handleError(error, 'Error loading tasks');
+            }
+            setLoading(false);
+          }
+        );
+
+        addUnsubscriber(unsubscribe);
+      }
     } catch (error) {
       if ((error as any).code !== 'permission-denied') {
         handleError(error, 'Error loading tasks');
       }
       setLoading(false);
     }
-  }, [user?.email, buildQueryConstraints]);
+  }, [user?.email, selectedCategory, selectedPriority]);
 
   const fetchCompletedTasks = useCallback((
     sortDirection: 'asc' | 'desc' | null,
@@ -175,11 +230,8 @@ export function useTasks() {
           ...doc.data(),
         })) as Task[];
 
-        const filteredData = nameFilter
-          ? tasksData.filter(task => task.title.toLowerCase().includes(nameFilter.toLowerCase()))
-          : tasksData;
-
-        setCompletedTasks(filteredData);
+        // Ensure we're only showing completed tasks
+        setCompletedTasks(tasksData.filter(task => task.completed));
       },
       (error) => {
         if (error.code !== 'permission-denied') {
@@ -197,21 +249,30 @@ export function useTasks() {
   ) => {
     if (!user?.email || nameFilter) return;
 
-    const constraints = buildQueryConstraints(sortDirection, nameFilter, false);
-    const q = query(collection(db, `users/${user.email}/tasks`), ...constraints);
+    // Create constraints without the due date filter for total count
+    const countConstraints: QueryConstraint[] = [];
+    
+    // Add category filter when viewing a specific category
+    if (selectedCategory !== null) {
+      countConstraints.push(where("categoryId", "==", selectedCategory));
+    }
+    
+    if (selectedPriority) {
+      countConstraints.push(where("priorityId", "==", selectedPriority));
+    }
+    
+    // Only filter for incomplete tasks
+    countConstraints.push(where("completed", "==", false));
+    
+    // Add basic ordering
+    countConstraints.push(orderBy("createdAt", "desc"));
+
+    const q = query(collection(db, `users/${user.email}/tasks`), ...countConstraints);
     
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
         const newTotal = snapshot.size;
-        if (sortDirection && newTotal !== totalTasks) {
-          setTotalTasks(newTotal);
-          pageSnapshotsRef.current = {};
-        } else if (newTotal > totalTasks) {
-          setTotalTasks(newTotal);
-          pageSnapshotsRef.current = {};
-        } else {
-          setTotalTasks(newTotal);
-        }
+        setTotalTasks(newTotal);
       },
       (error) => {
         if (error.code !== 'permission-denied') {
@@ -221,16 +282,53 @@ export function useTasks() {
     );
 
     addUnsubscriber(unsubscribe);
-  }, [user?.email, buildQueryConstraints]);
+  }, [user?.email, selectedCategory, selectedPriority]);
+
+  // Reset tasks when category changes
+  useEffect(() => {
+    if (user?.email) {
+      cleanup();
+      fetchTasks(currentPage, tasksPerPage, sortDirection, nameFilter);
+      fetchCompletedTasks(sortDirection, nameFilter);
+      fetchTotalTasks(sortDirection, nameFilter);
+    }
+  }, [selectedCategory, user?.email, currentPage, tasksPerPage, sortDirection, nameFilter, fetchTasks, fetchCompletedTasks, fetchTotalTasks]);
+
+  const deleteAllCompletedTasks = useCallback(async () => {
+    if (!user?.email) return;
+
+    try {
+      const queryConstraints: QueryConstraint[] = [
+        where("completed", "==", true)
+      ];
+
+      // Add category filter if a category is selected
+      if (selectedCategory) {
+        queryConstraints.push(where("categoryId", "==", selectedCategory));
+      }
+
+      const completedTasksQuery = query(
+        collection(db, `users/${user.email}/tasks`),
+        ...queryConstraints
+      );
+      
+      const snapshot = await getDocs(completedTasksQuery);
+      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      showSuccess('All completed tasks deleted successfully');
+    } catch (error) {
+      handleError(error, 'Error deleting completed tasks');
+    }
+  }, [user?.email, selectedCategory]);
 
   return {
     tasks,
     completedTasks,
     loading,
     totalTasks,
-    pageSnapshotsRef,
     fetchTasks,
     fetchCompletedTasks,
-    fetchTotalTasks
+    fetchTotalTasks,
+    deleteAllCompletedTasks
   };
 } 

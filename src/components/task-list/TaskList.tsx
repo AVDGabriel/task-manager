@@ -81,13 +81,17 @@ export default function TaskList() {
   }
 
   const filteredTasks = nameFilter
-    ? tasks.filter(task => task.title.toLowerCase().includes(nameFilter.toLowerCase()))
-    : tasks;
+    ? tasks.filter(task => 
+        task.title.toLowerCase().includes(nameFilter.toLowerCase()) &&
+        (!selectedCategory || task.categoryId === selectedCategory)
+      )
+    : tasks.filter(task => !selectedCategory || task.categoryId === selectedCategory);
 
   const filteredCompletedTasks = completedTasks
     .filter(task => 
       (!nameFilter || task.title.toLowerCase().includes(nameFilter.toLowerCase())) &&
-      (!selectedPriority || task.priorityId === selectedPriority)
+      (!selectedPriority || task.priorityId === selectedPriority) &&
+      (!selectedCategory || task.categoryId === selectedCategory)
     )
     .sort((a, b) => {
       if (!sortDirection || !a.dueDate || !b.dueDate) return 0;
