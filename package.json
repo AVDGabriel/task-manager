@@ -1,30 +1,40 @@
 {
   "name": "task-manager",
-  "version": "0.1.0",
+  "version": "0.1.0.0",
   "private": true,
+  "description": "Connected Microsoft To-Do Fluent Task Manager Module Federation Remote",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "node scripts/dev.mjs",
+    "dev:git": "node scripts/dev.mjs --git",
+    "dev:local": "node scripts/dev.mjs --local",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview --port 3002",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "release": "node scripts/release.mjs",
+    "release:verify": "node scripts/release.mjs --verify"
   },
   "dependencies": {
-    "firebase": "^11.6.0",
-    "lucide-react": "^0.501.0",
-    "next": "15.3.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-hot-toast": "^2.5.2"
+    "lucide-react": "^0.460.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.1",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@module-federation/enhanced": "^0.6.5",
+    "@module-federation/rsbuild-plugin": "^0.6.5",
+    "@rsbuild/core": "^1.0.1",
+    "@rsbuild/plugin-react": "^1.0.1",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^24.1.1",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.5"
   }
 }

@@ -1,0 +1,68 @@
+name: Publish Version Release (publish/x.y.z.b)
+
+on:
+  push:
+    branches:
+      - 'publish/**'
+
+jobs:
+  verify-and-publish:
+    name: Verify Version/Tag Rule & Publish Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: Checkout repository with full history and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all remote annotated tags
+        run: git fetch --tags --force
+
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@avdgabriel'
+
+      - name: Verify publish/x.y.z.b matches package.json and annotated tag
+        id: verify
+        run: |
+          node scripts/release.mjs --verify --branch "${GITHUB_REF_NAME}"
+          VERSION="${GITHUB_REF_NAME#publish/}"
+          if git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
+            TAG_NAME="${VERSION}"
+          else
+            TAG_NAME="v${VERSION}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Vitest unit tests
+        run: npm test
+
+      - name: Build Federated Bundle with Rsbuild
+        run: npm run build
+
+      - name: Publish GitHub Release for Verified Annotated Tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.verify.outputs.tag }}
+          VERSION: ${{ steps.verify.outputs.version }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release for tag $TAG_NAME already exists."
+          else
+            gh release create "$TAG_NAME" \
+              --verify-tag \
+              --title "Release $VERSION" \
+              --generate-notes
+          fi
