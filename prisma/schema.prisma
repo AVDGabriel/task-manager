@@ -1,0 +1,44 @@
+// Prisma schema for task-manager
+// Governs Task and TaskStep tables in shared PostgreSQL database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id        String     @id @default(uuid())
+  userId    String
+  title     String
+  completed Boolean    @default(false)
+  important Boolean    @default(false)
+  inMyDay   Boolean    @default(false)
+  dueDate   DateTime?
+  notes     String?
+  listName  String     @default("Tasks")
+  steps     TaskStep[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([userId, listName])
+  @@index([userId, completed])
+  @@map("tasks")
+}
+
+model TaskStep {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@map("task_steps")
+}
