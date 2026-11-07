@@ -1,0 +1,43 @@
+name: Task Manager Remote MFE CI
+
+on:
+  push:
+    branches: [main, uat, prod]
+  pull_request:
+    branches: [main, uat, prod]
+
+jobs:
+  build-and-test:
+    name: Test & Build Federated Remote (dist/mf-manifest.json)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@avdgabriel'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Vitest unit tests
+        run: npm test
+
+      - name: Build Federated Bundle with Rsbuild
+        run: npm run build
+
+      - name: Save Private Federated Bundle (mf-manifest.json & remoteEntry chunks)
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-manager-federated-dist
+          path: dist/
+          retention-days: 30
