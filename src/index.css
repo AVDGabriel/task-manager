@@ -1,12 +1,32 @@
-@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased selection:bg-teal-500/20 selection:text-teal-600 dark:selection:text-teal-400;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-  }
+.mfe-task-manager,
+.mfe-task-manager *,
+.mfe-task-manager ::before,
+.mfe-task-manager ::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e4e4e7;
+}
+
+.mfe-task-manager button,
+.mfe-task-manager input,
+.mfe-task-manager select,
+.mfe-task-manager textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
+.mfe-task-manager button {
+  cursor: pointer;
 }
 
 /* Fluent-style custom scrollbars */

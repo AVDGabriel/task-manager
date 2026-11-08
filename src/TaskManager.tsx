@@ -223,7 +223,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       observer = new MutationObserver(checkHtmlTheme)
       observer.observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ['class', 'style'],
+        attributeFilter: ['class'],
       })
     }
 
@@ -724,7 +724,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
   }, [activeList])
 
   return (
-    <div className={theme === 'dark' ? 'dark h-full w-full' : 'h-full w-full'}>
+    <div className={theme === 'dark' ? 'mfe-task-manager dark h-full w-full' : 'mfe-task-manager h-full w-full'}>
       <div className="flex h-full min-h-[700px] w-full bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 overflow-hidden font-sans rounded-2xl border border-zinc-200 dark:border-zinc-800/80 shadow-xl ring-1 ring-zinc-900/5 dark:ring-white/10 transition-colors">
         {/* 1. SIDEBAR */}
         <aside

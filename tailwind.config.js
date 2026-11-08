@@ -2,6 +2,10 @@
 module.exports = {
   content: ['./src/**/*.{js,jsx,ts,tsx,html}'],
   darkMode: 'selector',
+  important: '.mfe-task-manager',
+  corePlugins: {
+    preflight: false,
+  },
   theme: {
     fontSize: {
       xs: ['0.8125rem', { lineHeight: '1.5rem' }],
