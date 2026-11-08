@@ -110,4 +110,21 @@ describe('TaskManager Fluent MFE Remote', () => {
       expect(screen.getByText(/Connect shared PostgreSQL task database/)).toBeInTheDocument()
     })
   })
+
+  it('allows deleting custom lists and does not display the TM badge', async () => {
+    render(<TaskManager initialUserId="test-user" initialTasks={MOCK_TASKS} />)
+
+    // Ensure "TM" badge is not displayed beside Personal To-Do
+    expect(screen.queryByText('TM')).not.toBeInTheDocument()
+    expect(screen.getByText('Personal To-Do')).toBeInTheDocument()
+
+    // Custom lists "Work" and "Personal" should be rendered with delete buttons
+    expect(screen.getByText('Work')).toBeInTheDocument()
+    const deleteWorkBtn = screen.getByLabelText('Delete list Work')
+    fireEvent.click(deleteWorkBtn)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Work')).not.toBeInTheDocument()
+    })
+  })
 })
