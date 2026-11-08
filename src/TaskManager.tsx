@@ -123,10 +123,27 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     return 'dark'
   })
 
-  // Current authenticated user (from host mfe-bus or prop or guest)
-  const [userId, setUserId] = useState<string>(initialUserId || '')
-  const [userEmail, setUserEmail] = useState<string>('')
-  const [tasks, setTasks] = useState<Task[]>(initialTasks || DEFAULT_DEMO_TASKS)
+  // Current authenticated user (from host mfe-bus or prop)
+  const [userId, setUserId] = useState<string>(() => {
+    if (initialUserId) return initialUserId
+    try {
+      const stateUser = mfeBus?.getState?.('auth:user')
+      if (stateUser?.id || stateUser?.email) {
+        return stateUser.id || stateUser.email
+      }
+    } catch {}
+    return ''
+  })
+  const [userEmail, setUserEmail] = useState<string>(() => {
+    try {
+      const stateUser = mfeBus?.getState?.('auth:user')
+      if (stateUser?.name || stateUser?.email) {
+        return stateUser.name || stateUser.email
+      }
+    } catch {}
+    return ''
+  })
+  const [tasks, setTasks] = useState<Task[]>(initialTasks || [])
   const [customLists, setCustomLists] = useState<string[]>(DEFAULT_CUSTOM_LISTS)
   const [activeList, setActiveList] = useState<SmartListId>('my-day')
   const [newListName, setNewListName] = useState('')
@@ -259,8 +276,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
   // Load tasks when userId or apiBaseUrl changes
   useEffect(() => {
-    const activeUserId = userId || 'demo-user'
-    const storedCustomLists = loadStoredLists(activeUserId)
+    if (!userId) return
+
+    const storedCustomLists = loadStoredLists(userId)
     if (storedCustomLists) {
       setCustomLists(storedCustomLists)
     }
@@ -270,7 +288,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     async function fetchTasks() {
       setLoading(true)
       try {
-        const endpoint = `${apiBaseUrl}/api/tasks?userId=${encodeURIComponent(activeUserId)}`
+        const endpoint = `${apiBaseUrl}/api/tasks?userId=${encodeURIComponent(userId)}`
         const res = await fetch(endpoint)
         if (res.ok) {
           const data = await res.json()
@@ -283,7 +301,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             data.tasks.forEach((t: Task) => {
               if (t.listName && t.listName !== 'Tasks') taskLists.add(t.listName)
             })
-            const baseLists = loadStoredLists(activeUserId) ?? DEFAULT_CUSTOM_LISTS
+            const baseLists = loadStoredLists(userId) ?? DEFAULT_CUSTOM_LISTS
             const mergedLists = Array.from(new Set([...baseLists, ...Array.from(taskLists)]))
             setCustomLists(mergedLists)
             setLoading(false)
@@ -291,19 +309,19 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
           }
         }
       } catch {
-        // Fallback to local storage or demo data
+        // Fallback to local storage
       }
 
       // Offline / standalone storage
       try {
-        const stored = localStorage.getItem(`tasks_${activeUserId}`)
+        const stored = localStorage.getItem(`tasks_${userId}`)
         if (stored) {
           setTasks(JSON.parse(stored))
         } else {
-          setTasks(DEFAULT_DEMO_TASKS)
+          setTasks([])
         }
       } catch {
-        setTasks(DEFAULT_DEMO_TASKS)
+        setTasks([])
       }
       setIsOnlineBackend(false)
       setLoading(false)
