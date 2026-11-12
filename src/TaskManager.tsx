@@ -43,6 +43,12 @@ interface TaskManagerProps {
   apiBaseUrl?: string
   initialUserId?: string
   initialTasks?: Task[]
+  /**
+   * Provided by the host: returns a fresh Firebase ID token for the signed-in user.
+   * The host API derives the owner from this token only; without it (e.g. standalone)
+   * every API call is rejected and the demo/offline mode is used.
+   */
+  getAuthToken?: () => Promise<string | null>
 }
 
 const DEFAULT_DEMO_TASKS: Task[] = [
@@ -103,8 +109,17 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
   apiBaseUrl = '',
   initialUserId,
   initialTasks,
+  getAuthToken,
 }) => {
   const mfeBus = useMemo(() => resolveBus(), [])
+
+  // Every API call carries the host-issued ID token; the server ignores client-sent user ids.
+  const apiFetch = async (url: string, init: RequestInit = {}): Promise<Response> => {
+    const token = getAuthToken ? await getAuthToken().catch(() => null) : null
+    const headers = new Headers(init.headers)
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    return fetch(url, { ...init, headers })
+  }
 
   // Theme state synced with personal website (mfe-bus + document.documentElement)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -289,7 +304,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
       setLoading(true)
       try {
         const endpoint = `${apiBaseUrl}/api/tasks?userId=${encodeURIComponent(userId)}`
-        const res = await fetch(endpoint)
+        const res = await apiFetch(endpoint)
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data.tasks)) {
@@ -361,14 +376,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
     const activeUserId = userId || 'demo-user'
     try {
-      await fetch(
+      await apiFetch(
         `${apiBaseUrl}/api/tasks?userId=${encodeURIComponent(activeUserId)}&listName=${encodeURIComponent(listNameToDelete)}`,
         { method: 'DELETE' },
       )
     } catch {
       // Fallback: delete individual tasks if needed
       for (const t of tasksToDelete) {
-        fetch(`${apiBaseUrl}/api/tasks?id=${encodeURIComponent(t.id)}`, {
+        apiFetch(`${apiBaseUrl}/api/tasks?id=${encodeURIComponent(t.id)}`, {
           method: 'DELETE',
         }).catch(() => {})
       }
@@ -418,7 +433,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
     // Call API if available
     try {
-      const res = await fetch(`${apiBaseUrl}/api/tasks`, {
+      const res = await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -457,7 +472,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, completed: nextCompleted }),
@@ -480,7 +495,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, important: nextImportant }),
@@ -502,7 +517,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, inMyDay: nextInMyDay }),
@@ -516,7 +531,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, title }),
@@ -530,7 +545,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, notes }),
@@ -544,7 +559,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, dueDate }),
@@ -561,7 +576,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     }
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks?id=${encodeURIComponent(taskId)}`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks?id=${encodeURIComponent(taskId)}`, {
         method: 'DELETE',
       })
     } catch {}
@@ -585,7 +600,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     setNewStepTitle('')
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, addStep: stepTitle.trim() }),
@@ -605,7 +620,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, toggleStepId: stepId }),
@@ -622,7 +637,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     saveTasksLocally(updated)
 
     try {
-      await fetch(`${apiBaseUrl}/api/tasks`, {
+      await apiFetch(`${apiBaseUrl}/api/tasks`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: taskId, deleteStepId: stepId }),
@@ -1452,7 +1467,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         t.id === selectedTask.id ? { ...t, listName: nextList } : t,
                       )
                       saveTasksLocally(updated)
-                      fetch(`${apiBaseUrl}/api/tasks`, {
+                      apiFetch(`${apiBaseUrl}/api/tasks`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: selectedTask.id, listName: nextList }),

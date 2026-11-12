@@ -127,4 +127,21 @@ describe('TaskManager Fluent MFE Remote', () => {
       expect(screen.queryByText('Work')).not.toBeInTheDocument()
     })
   })
+
+  it('sends the host-provided ID token on API calls', async () => {
+    const getAuthToken = vi.fn().mockResolvedValue('test-id-token')
+    render(<TaskManager initialUserId="test-user" getAuthToken={getAuthToken} />)
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    const [, init] = (global.fetch as any).mock.calls[0]
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-id-token')
+  })
+
+  it('sends no Authorization header without a token provider (standalone)', async () => {
+    render(<TaskManager initialUserId="test-user" />)
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    const [, init] = (global.fetch as any).mock.calls[0]
+    expect(new Headers(init?.headers).get('Authorization')).toBeNull()
+  })
 })
