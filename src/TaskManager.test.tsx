@@ -134,14 +134,14 @@ describe('TaskManager Fluent MFE Remote', () => {
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
     const [, init] = (global.fetch as any).mock.calls[0]
-    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-id-token')
+    expect(new Headers(init.headers).get('X-Firebase-Id-Token')).toBe('test-id-token')
   })
 
-  it('sends no Authorization header without a token provider (standalone)', async () => {
+  it('sends no ID token header without a token provider (standalone)', async () => {
     render(<TaskManager initialUserId="test-user" />)
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
     const [, init] = (global.fetch as any).mock.calls[0]
-    expect(new Headers(init?.headers).get('Authorization')).toBeNull()
+    expect(new Headers(init?.headers).get('X-Firebase-Id-Token')).toBeNull()
   })
 })

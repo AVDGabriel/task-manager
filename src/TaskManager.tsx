@@ -117,7 +117,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
   const apiFetch = async (url: string, init: RequestInit = {}): Promise<Response> => {
     const token = getAuthToken ? await getAuthToken().catch(() => null) : null
     const headers = new Headers(init.headers)
-    if (token) headers.set('Authorization', `Bearer ${token}`)
+    // Not `Authorization`: on UAT, Traefik basic auth owns that header.
+    if (token) headers.set('X-Firebase-Id-Token', token)
     return fetch(url, { ...init, headers })
   }
 
