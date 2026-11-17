@@ -16,6 +16,8 @@ import {
   Folder,
 } from 'lucide-react'
 import { getMFEBus } from '@avdgabriel/mfe-bus'
+import { useI18n } from '@avdgabriel/i18n/react'
+import { I18N_OPTIONS } from './i18n'
 import { Task, TaskStep, SmartListId, SortMode } from './types'
 import './index.css'
 
@@ -112,6 +114,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
   getAuthToken,
 }) => {
   const mfeBus = useMemo(() => resolveBus(), [])
+  const { t: tr, locale } = useI18n(I18N_OPTIONS)
 
   // Every API call carries the host-issued ID token; the server ignores client-sent user ids.
   const apiFetch = async (url: string, init: RequestInit = {}): Promise<Response> => {
@@ -722,9 +725,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     switch (activeList) {
       case 'my-day':
         return {
-          title: 'My Day',
+          title: tr('task-manager.list.my-day'),
           icon: <Sun className="w-6 h-6 text-amber-500 dark:text-amber-400 shrink-0" />,
-          subtitle: new Intl.DateTimeFormat('en-US', {
+          subtitle: new Intl.DateTimeFormat(locale, {
             weekday: 'long',
             month: 'long',
             day: 'numeric',
@@ -732,30 +735,30 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         }
       case 'important':
         return {
-          title: 'Important',
+          title: tr('task-manager.list.important'),
           icon: <Star className="w-6 h-6 text-teal-600 dark:text-teal-400 fill-teal-600 dark:fill-teal-400 shrink-0" />,
-          subtitle: 'Prioritized items',
+          subtitle: tr('task-manager.list.subtitle.important'),
         }
       case 'planned':
         return {
-          title: 'Planned',
+          title: tr('task-manager.list.planned'),
           icon: <Calendar className="w-6 h-6 text-teal-600 dark:text-teal-400 shrink-0" />,
-          subtitle: 'Tasks with due dates',
+          subtitle: tr('task-manager.list.subtitle.planned'),
         }
       case 'tasks':
         return {
-          title: 'Tasks',
+          title: tr('task-manager.list.tasks'),
           icon: <CheckSquare className="w-6 h-6 text-teal-600 dark:text-teal-500 shrink-0" />,
-          subtitle: 'All personal tasks',
+          subtitle: tr('task-manager.list.subtitle.tasks'),
         }
       default:
         return {
           title: activeList,
           icon: <Folder className="w-6 h-6 text-teal-600 dark:text-teal-400 shrink-0" />,
-          subtitle: 'Custom task list',
+          subtitle: tr('task-manager.list.subtitle.custom'),
         }
     }
-  }, [activeList])
+  }, [activeList, tr, locale])
 
   return (
     <div className={theme === 'dark' ? 'mfe-task-manager dark h-full w-full' : 'mfe-task-manager h-full w-full'}>
@@ -775,7 +778,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 </div>
                 <div className="overflow-hidden min-w-0">
                   <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
-                    {userEmail || 'Personal To-Do'}
+                    {userEmail || tr('task-manager.sidebar.default-user')}
                   </div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
                     <span
@@ -784,7 +787,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                       }`}
                     />
                     <span className="truncate">
-                      {isOnlineBackend ? 'Postgres Synced' : 'Local Workspace'}
+                      {isOnlineBackend ? tr('task-manager.sidebar.synced') : tr('task-manager.sidebar.local')}
                     </span>
                   </div>
                 </div>
@@ -803,7 +806,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
-                  <span>My Day</span>
+                  <span>{tr('task-manager.list.my-day')}</span>
                 </div>
                 {counts.myDay > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
@@ -822,7 +825,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <Star className="w-4 h-4 text-teal-600 dark:text-teal-400 fill-teal-500/20 dark:fill-teal-400/20 shrink-0" />
-                  <span>Important</span>
+                  <span>{tr('task-manager.list.important')}</span>
                 </div>
                 {counts.important > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
@@ -841,7 +844,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                  <span>Planned</span>
+                  <span>{tr('task-manager.list.planned')}</span>
                 </div>
                 {counts.planned > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
@@ -860,7 +863,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <CheckSquare className="w-4 h-4 text-teal-600 dark:text-teal-500 shrink-0" />
-                  <span>Tasks</span>
+                  <span>{tr('task-manager.list.tasks')}</span>
                 </div>
                 {counts.tasks > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
@@ -873,11 +876,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {/* Custom Lists Section */}
             <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/60 space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-2">
-                <span>Lists</span>
+                <span>{tr('task-manager.list.lists')}</span>
                 <button
                   onClick={() => setIsAddingList(true)}
                   className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-                  title="Add new list"
+                  title={tr('task-manager.list.add')}
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -900,7 +903,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 >
                   <input
                     type="text"
-                    placeholder="List name..."
+                    placeholder={tr('task-manager.list.name-placeholder')}
                     value={newListName}
                     onChange={(e) => setNewListName(e.target.value)}
                     autoFocus
@@ -952,8 +955,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         <button
                           type="button"
                           onClick={(e) => handleDeleteList(name, e)}
-                          title={`Delete list ${name}`}
-                          aria-label={`Delete list ${name}`}
+                          title={tr('task-manager.list.delete', { name })}
+                          aria-label={tr('task-manager.list.delete', { name })}
                           className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -975,7 +978,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               <button
                 onClick={() => setSidebarOpen((v) => !v)}
                 className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-colors shrink-0"
-                title="Toggle sidebar"
+                title={tr('task-manager.toolbar.toggle-sidebar')}
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -989,8 +992,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleDeleteList(activeList, e)}
-                      title={`Delete list ${activeList}`}
-                      aria-label={`Delete list ${activeList}`}
+                      title={tr('task-manager.list.delete', { name: activeList })}
+                      aria-label={tr('task-manager.list.delete', { name: activeList })}
                       className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-colors shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1009,7 +1012,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400 dark:text-zinc-500" />
                 <input
                   type="text"
-                  placeholder="Search tasks..."
+                  placeholder={tr('task-manager.toolbar.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-zinc-50 dark:bg-zinc-900/80 text-xs text-zinc-800 dark:text-zinc-200 pl-9 pr-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-teal-500 w-44 focus:w-60 transition-all placeholder-zinc-400 dark:placeholder-zinc-500"
@@ -1031,11 +1034,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   onChange={(e) => setSortMode(e.target.value as SortMode)}
                   className="bg-zinc-50 dark:bg-zinc-900 text-xs text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 pr-6 appearance-none focus:outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option value="default">Sort: Default</option>
-                  <option value="importance">Sort: Importance</option>
-                  <option value="dueDate">Sort: Due Date</option>
-                  <option value="alphabetical">Sort: Alphabetical</option>
-                  <option value="creationDate">Sort: Creation Date</option>
+                  <option value="default">{tr('task-manager.sort.default')}</option>
+                  <option value="importance">{tr('task-manager.sort.importance')}</option>
+                  <option value="dueDate">{tr('task-manager.sort.due-date')}</option>
+                  <option value="alphabetical">{tr('task-manager.sort.alphabetical')}</option>
+                  <option value="creationDate">{tr('task-manager.sort.creation-date')}</option>
                 </select>
                 <ArrowUpDown className="w-3 h-3 absolute right-2 top-3 pointer-events-none text-zinc-400" />
               </div>
@@ -1063,7 +1066,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   </button>
                   <input
                     type="text"
-                    placeholder="Add a task"
+                    placeholder={tr('task-manager.quick.placeholder')}
                     value={quickTitle}
                     onChange={(e) => setQuickTitle(e.target.value)}
                     onFocus={() => setQuickAddFocused(true)}
@@ -1094,7 +1097,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         }`}
                       >
                         <Sun className="w-3.5 h-3.5 shrink-0" />
-                        <span>My Day</span>
+                        <span>{tr('task-manager.list.my-day')}</span>
                       </button>
 
                       {/* Quick Important */}
@@ -1108,7 +1111,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         }`}
                       >
                         <Star className="w-3.5 h-3.5 shrink-0" />
-                        <span>Important</span>
+                        <span>{tr('task-manager.list.important')}</span>
                       </button>
                     </div>
 
@@ -1121,14 +1124,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         }}
                         className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 px-2 py-1"
                       >
-                        Cancel
+                        {tr('task-manager.quick.cancel')}
                       </button>
                       <button
                         type="submit"
                         disabled={!quickTitle.trim()}
                         className="bg-teal-500 hover:bg-teal-600 dark:hover:bg-teal-400 disabled:opacity-40 text-white dark:text-zinc-950 font-semibold px-3 py-1 rounded transition-colors"
                       >
-                        Add
+                        {tr('task-manager.quick.add')}
                       </button>
                     </div>
                   </div>
@@ -1153,7 +1156,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     <button
                       onClick={(e) => handleToggleComplete(task.id, e)}
                       className="w-5 h-5 rounded-full border border-zinc-400 dark:border-zinc-500 hover:border-teal-500 dark:hover:border-teal-400 flex items-center justify-center transition-all group-hover:scale-105 shrink-0"
-                      title="Mark as completed"
+                      title={tr('task-manager.task.mark-completed')}
                     >
                       <Check className="w-3 h-3 text-transparent group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
                     </button>
@@ -1167,14 +1170,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {task.inMyDay && (
                           <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
                             <Sun className="w-3 h-3 shrink-0" />
-                            <span>My Day</span>
+                            <span>{tr('task-manager.list.my-day')}</span>
                           </span>
                         )}
                         {task.dueDate && (
                           <span className="inline-flex items-center gap-1.5 text-teal-600 dark:text-teal-400">
                             <Calendar className="w-3 h-3 shrink-0" />
                             <span>
-                              {new Date(task.dueDate).toLocaleDateString(undefined, {
+                              {new Date(task.dueDate).toLocaleDateString(locale, {
                                 month: 'short',
                                 day: 'numeric',
                               })}
@@ -1183,8 +1186,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         )}
                         {task.steps && task.steps.length > 0 && (
                           <span className="inline-flex items-center gap-1">
-                            {task.steps.filter((s) => s.completed).length} of{' '}
-                            {task.steps.length} steps
+                            {tr('task-manager.task.steps-progress', {
+                              done: task.steps.filter((s) => s.completed).length,
+                              total: task.steps.length,
+                            })}
                           </span>
                         )}
                         {activeList !== task.listName && task.listName && (
@@ -1201,7 +1206,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   <button
                     onClick={(e) => handleToggleImportant(task.id, e)}
                     className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors shrink-0 ml-2"
-                    title="Toggle important"
+                    title={tr('task-manager.task.toggle-important')}
                   >
                     <Star
                       className={`w-4 h-4 transition-transform group-hover:scale-110 ${
@@ -1216,7 +1221,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
               {uncompletedTasks.length === 0 && (
                 <div className="py-12 text-center text-zinc-400 dark:text-zinc-500 text-sm">
-                  No active tasks in this view. Add one above!
+                  {tr('task-manager.task.empty')}
                 </div>
               )}
             </div>
@@ -1233,7 +1238,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   ) : (
                     <ChevronRight className="w-4 h-4 shrink-0" />
                   )}
-                  <span>Completed ({completedTasks.length})</span>
+                  <span>{tr('task-manager.task.completed', { count: completedTasks.length })}</span>
                 </button>
 
                 {completedOpen && (
@@ -1248,7 +1253,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                           <button
                             onClick={(e) => handleToggleComplete(task.id, e)}
                             className="w-5 h-5 rounded-full bg-teal-500 border border-teal-500 flex items-center justify-center transition-all animate-check-pop shrink-0"
-                            title="Mark incomplete"
+                            title={tr('task-manager.task.mark-incomplete')}
                           >
                             <Check className="w-3 h-3 text-white dark:text-zinc-950 stroke-[3]" />
                           </button>
@@ -1321,7 +1326,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   <button
                     onClick={() => setSelectedTaskId(null)}
                     className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100"
-                    title="Close panel"
+                    title={tr('task-manager.drawer.close')}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1331,7 +1336,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               {/* Subtasks / Steps Checklist */}
               <div className="space-y-2">
                 <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Steps
+                  {tr('task-manager.drawer.steps')}
                 </div>
                 <div className="space-y-1.5">
                   {(selectedTask.steps || []).map((step) => (
@@ -1384,7 +1389,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     <Plus className="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0" />
                     <input
                       type="text"
-                      placeholder="Next step"
+                      placeholder={tr('task-manager.drawer.next-step')}
                       value={newStepTitle}
                       onChange={(e) => setNewStepTitle(e.target.value)}
                       className="w-full bg-transparent text-xs text-zinc-700 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
@@ -1394,7 +1399,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         type="submit"
                         className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline shrink-0"
                       >
-                        Add
+                        {tr('task-manager.drawer.add')}
                       </button>
                     )}
                   </form>
@@ -1415,7 +1420,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   <div className="flex items-center gap-2.5">
                     <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                     <span>
-                      {selectedTask.inMyDay ? 'Added to My Day' : 'Add to My Day'}
+                      {selectedTask.inMyDay ? tr('task-manager.drawer.added-to-my-day') : tr('task-manager.drawer.add-to-my-day')}
                     </span>
                   </div>
                   {selectedTask.inMyDay && <Check className="w-3.5 h-3.5 shrink-0" />}
@@ -1426,14 +1431,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                      <span>Due Date</span>
+                      <span>{tr('task-manager.drawer.due-date')}</span>
                     </div>
                     {selectedTask.dueDate && (
                       <button
                         onClick={() => handleUpdateDueDate(selectedTask.id, null)}
                         className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                       >
-                        Clear
+                        {tr('task-manager.drawer.clear')}
                       </button>
                     )}
                   </div>
@@ -1458,7 +1463,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 <div className="p-3 rounded-xl bg-white dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Folder className="w-4 h-4 text-zinc-400 shrink-0" />
-                    <span>List:</span>
+                    <span>{tr('task-manager.drawer.list')}</span>
                   </div>
                   <select
                     value={selectedTask.listName}
@@ -1476,7 +1481,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     }}
                     className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-teal-500"
                   >
-                    <option value="Tasks">Tasks</option>
+                    <option value="Tasks">{tr('task-manager.list.tasks')}</option>
                     {customLists.map((cl) => (
                       <option key={cl} value={cl}>
                         {cl}
@@ -1489,11 +1494,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
               {/* Notes Section */}
               <div className="space-y-1.5">
                 <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Notes
+                  {tr('task-manager.drawer.notes')}
                 </div>
                 <textarea
                   rows={5}
-                  placeholder="Add notes..."
+                  placeholder={tr('task-manager.drawer.notes-placeholder')}
                   value={selectedTask.notes || ''}
                   onChange={(e) =>
                     handleUpdateNotes(selectedTask.id, e.target.value)
@@ -1506,16 +1511,17 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {/* Drawer Footer */}
             <div className="p-4 border-t border-zinc-200 dark:border-zinc-800/60 flex items-center justify-between text-xs text-zinc-500">
               <span>
-                Created{' '}
-                {new Date(selectedTask.createdAt).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
+                {tr('task-manager.drawer.created', {
+                  date: new Date(selectedTask.createdAt).toLocaleDateString(locale, {
+                    month: 'short',
+                    day: 'numeric',
+                  }),
                 })}
               </span>
               <button
                 onClick={() => handleDeleteTask(selectedTask.id)}
                 className="text-zinc-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded transition-colors flex items-center gap-1"
-                title="Delete task"
+                title={tr('task-manager.drawer.delete-task')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
